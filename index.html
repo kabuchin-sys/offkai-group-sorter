@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#667eea">
+<title>オフ会グループ仕分け</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --primary: #667eea;
+  --primary-dark: #5a6fd6;
+  --accent: #f093fb;
+  --bg: #0f0f23;
+  --surface: #1a1a2e;
+  --surface2: #25253e;
+  --text: #e8e8f0;
+  --text-dim: #8888aa;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --radius: 14px;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, var(--primary), #764ba2);
+  padding: 16px 20px;
+  padding-top: calc(env(safe-area-inset-top, 20px) + 12px);
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.header p {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+/* Container */
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* Card */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title .icon {
+  font-size: 18px;
+}
+
+/* CSV Upload */
+.upload-area {
+  border: 2px dashed rgba(255,255,255,0.15);
+  border-radius: 12px;
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.upload-area:hover, .upload-area.dragover {
+  border-color: var(--primary);
+  background: rgba(102,126,234,0.08);
+}
+.upload-area .icon-large { font-size: 36px; margin-bottom: 8px; }
+.upload-area p { font-size: 14px; color: var(--text-dim); }
+.upload-area .hint { font-size: 11px; color: var(--text-dim); margin-top: 6px; }
+#csvFileInput { display: none; }
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: var(--surface2);
+  border-radius: 10px;
+  margin-top: 12px;
+}
+.file-info .name { flex: 1; font-size: 13px; }
+.file-info .count { font-size: 12px; color: var(--success); }
+.file-info .remove-btn {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* Sample CSV */
+.sample-link {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--primary);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Settings */
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.setting-row:last-child { margin-bottom: 0; }
+.setting-label {
+  font-size: 14px;
+}
+.setting-label small {
+  display: block;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.number-input {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.number-input button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.number-input button:first-child { border-radius: 8px 0 0 8px; }
+.number-input button:last-child { border-radius: 0 8px 8px 0; }
+.number-input input {
+  width: 50px;
+  height: 36px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-left: none;
+  border-right: none;
+  background: var(--surface2);
+  color: var(--text);
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  -moz-appearance: textfield;
+}
+.number-input input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+/* Member List */
+.member-list {
+  max-height: 300px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.member-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+.member-item .member-name { flex: 1; }
+.member-item .badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+.badge-facilitator {
+  background: rgba(251,191,36,0.2);
+  color: var(--warning);
+}
+.badge-fixed {
+  background: rgba(102,126,234,0.2);
+  color: var(--primary);
+}
+
+/* Fixed Assignment */
+.fixed-setting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.fixed-setting .member-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fixed-setting select {
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  min-width: 60px;
+}
+.fixed-setting .role-select {
+  min-width: 90px;
+}
+
+.toggle-btn {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  border: none;
+  background: rgba(255,255,255,0.15);
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.toggle-btn.active {
+  background: var(--primary);
+}
+.toggle-btn::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s;
+}
+.toggle-btn.active::after {
+  transform: translateX(18px);
+}
+
+/* Buttons */
+.btn-primary {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), #764ba2);
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: opacity 0.2s;
+}
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn-primary:active:not(:disabled) {
+  opacity: 0.8;
+}
+
+.btn-secondary {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+/* Results */
+.turn-section {
+  margin-bottom: 20px;
+}
+.turn-header {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, var(--primary), #764ba2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.group-card {
+  background: var(--surface2);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--primary);
+}
+.group-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.group-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.member-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 20px;
+  font-size: 13px;
+}
+.member-tag.is-facilitator {
+  background: rgba(251,191,36,0.15);
+  border: 1px solid rgba(251,191,36,0.3);
+}
+.member-tag.is-fixed {
+  background: rgba(102,126,234,0.15);
+  border: 1px solid rgba(102,126,234,0.3);
+}
+.member-tag .role-icon { font-size: 11px; }
+
+/* Overlap stats */
+.overlap-stats {
+  padding: 12px;
+  background: var(--surface2);
+  border-radius: 10px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.overlap-good { color: var(--success); }
+.overlap-ok { color: var(--warning); }
+.overlap-bad { color: var(--danger); }
+
+/* Section visibility */
+.section { display: none; }
+.section.active { display: block; }
+
+/* Tabs */
+.tab-bar {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 4px;
+}
+.tab-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.tab-btn.active {
+  background: var(--primary);
+  color: white;
+}
+
+/* Scroll */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* Colors for groups */
+.group-color-0 { border-left-color: #667eea; }
+.group-color-1 { border-left-color: #f093fb; }
+.group-color-2 { border-left-color: #4ade80; }
+.group-color-3 { border-left-color: #fbbf24; }
+.group-color-4 { border-left-color: #f87171; }
+.group-color-5 { border-left-color: #22d3ee; }
+.group-color-6 { border-left-color: #c084fc; }
+.group-color-7 { border-left-color: #fb923c; }
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeIn 0.3s ease; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>オフ会グループ仕分け</h1>
+  <p>メンバーをランダムにグループ分け</p>
+</div>
+
+<div class="container">
+  <!-- Section 1: Setup -->
+  <div id="setupSection" class="section active">
+
+    <!-- CSV Upload -->
+    <div class="card">
+      <div class="card-title"><span class="icon">📋</span> 参加者リスト</div>
+      <div class="upload-area" id="uploadArea" onclick="document.getElementById('csvFileInput').click()">
+        <div class="icon-large">📁</div>
+        <p>CSVファイルをタップして選択</p>
+        <div class="hint">形式: 名前 の1列、またはヘッダー付きCSV</div>
+      </div>
+      <input type="file" id="csvFileInput" accept=".csv,.txt">
+      <div id="fileInfo" style="display:none"></div>
+      <span class="sample-link" onclick="loadSampleData()">サンプルデータで試す</span>
+    </div>
+
+    <!-- Settings -->
+    <div class="card">
+      <div class="card-title"><span class="icon">⚙️</span> 設定</div>
+      <div class="setting-row">
+        <div class="setting-label">
+          グループ数
+          <small>参加者を何グループに分けるか</small>
+        </div>
+        <div class="number-input">
+          <button onclick="adjustNumber('groupCount', -1)">−</button>
+          <input type="number" id="groupCount" value="4" min="2" max="20">
+          <button onclick="adjustNumber('groupCount', 1)">+</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">
+          ターン数
+          <small>何回グループ替えを行うか</small>
+        </div>
+        <div class="number-input">
+          <button onclick="adjustNumber('turnCount', -1)">−</button>
+          <input type="number" id="turnCount" value="3" min="1" max="10">
+          <button onclick="adjustNumber('turnCount', 1)">+</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fixed Members -->
+    <div class="card" id="fixedMembersCard" style="display:none">
+      <div class="card-title"><span class="icon">📌</span> 固定メンバー設定</div>
+      <p style="font-size:12px; color:var(--text-dim); margin-bottom:12px;">
+        各メンバーの役割とグループ固定を設定できます。<br>
+        「固定」をONにすると全ターンでそのグループに配置されます。
+      </p>
+      <div id="fixedMembersList"></div>
+    </div>
+
+    <!-- Generate Button -->
+    <button class="btn-primary" id="generateBtn" disabled onclick="generateGroups()">
+      グループを生成する
+    </button>
+
+  </div>
+
+  <!-- Section 2: Results -->
+  <div id="resultSection" class="section">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="showTab('all')">全ターン</button>
+      <button class="tab-btn" onclick="showTab('byTurn')">ターン別</button>
+      <button class="tab-btn" onclick="showTab('stats')">統計</button>
+    </div>
+
+    <div id="resultContent"></div>
+
+    <button class="btn-primary" onclick="generateGroups()" style="margin-top:16px">
+      再シャッフル
+    </button>
+    <button class="btn-secondary" onclick="showSetup()">
+      設定に戻る
+    </button>
+    <button class="btn-secondary" onclick="exportResults()">
+      結果をCSVで保存
+    </button>
+  </div>
+</div>
+
+<script>
+// State
+let members = [];
+let fixedSettings = {}; // { name: { role: 'facilitator'|'fixed'|'none', group: number|null } }
+let results = null;
+let currentTab = 'all';
+
+// CSV Upload
+const csvInput = document.getElementById('csvFileInput');
+const uploadArea = document.getElementById('uploadArea');
+
+csvInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) readCSV(file);
+});
+
+uploadArea.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadArea.classList.add('dragover');
+});
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadArea.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) readCSV(file);
+});
+
+function readCSV(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const text = e.target.result;
+    parseCSV(text, file.name);
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSV(text, fileName) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length === 0) return;
+
+  // Check if first line is header
+  const firstLine = lines[0].toLowerCase();
+  const startIndex = (firstLine.includes('名前') || firstLine.includes('name') || firstLine.includes('氏名')) ? 1 : 0;
+
+  members = [];
+  for (let i = startIndex; i < lines.length; i++) {
+    const cols = lines[i].split(',');
+    const name = cols[0].trim().replace(/^["']|["']$/g, '');
+    if (name) members.push(name);
+  }
+
+  // Remove duplicates
+  members = [...new Set(members)];
+
+  if (members.length === 0) return;
+
+  // Init fixed settings
+  members.forEach(m => {
+    if (!fixedSettings[m]) {
+      fixedSettings[m] = { role: 'none', group: null };
+    }
+  });
+
+  // Update UI
+  uploadArea.style.display = 'none';
+  const fileInfo = document.getElementById('fileInfo');
+  fileInfo.style.display = 'flex';
+  fileInfo.innerHTML = `
+    <div class="name">${fileName || 'データ'}</div>
+    <div class="count">${members.length}名</div>
+    <button class="remove-btn" onclick="clearMembers()">✕</button>
+  `;
+  fileInfo.className = 'file-info fade-in';
+
+  document.getElementById('fixedMembersCard').style.display = 'block';
+  renderFixedMembers();
+  updateGenerateBtn();
+}
+
+function clearMembers() {
+  members = [];
+  fixedSettings = {};
+  uploadArea.style.display = '';
+  document.getElementById('fileInfo').style.display = 'none';
+  document.getElementById('fixedMembersCard').style.display = 'none';
+  csvInput.value = '';
+  updateGenerateBtn();
+}
+
+function loadSampleData() {
+  const sampleCSV = `名前
+田中太郎
+佐藤花子
+鈴木一郎
+高橋美咲
+伊藤健太
+渡辺真由
+山本大輔
+中村さくら
+小林誠
+加藤恵
+吉田隆
+松本あかり
+山田翔太
+井上めぐみ
+木村拓也
+林真理子`;
+  parseCSV(sampleCSV, 'サンプルデータ');
+}
+
+function renderFixedMembers() {
+  const groupCount = parseInt(document.getElementById('groupCount').value) || 4;
+  const list = document.getElementById('fixedMembersList');
+
+  list.innerHTML = members.map(name => {
+    const s = fixedSettings[name] || { role: 'none', group: null };
+    const groupOptions = Array.from({length: groupCount}, (_, i) =>
+      `<option value="${i}" ${s.group === i ? 'selected' : ''}>G${i+1}</option>`
+    ).join('');
+
+    return `
+      <div class="fixed-setting">
+        <span class="member-name">${name}</span>
+        <select class="role-select" onchange="setRole('${name}', this.value)">
+          <option value="none" ${s.role === 'none' ? 'selected' : ''}>一般</option>
+          <option value="facilitator" ${s.role === 'facilitator' ? 'selected' : ''}>ファシリ</option>
+          <option value="fixed" ${s.role === 'fixed' ? 'selected' : ''}>固定</option>
+        </select>
+        <select onchange="setGroup('${name}', this.value)" ${s.role === 'none' ? 'disabled' : ''}>
+          <option value="">自動</option>
+          ${groupOptions}
+        </select>
+      </div>
+    `;
+  }).join('');
+}
+
+function setRole(name, role) {
+  fixedSettings[name] = fixedSettings[name] || { role: 'none', group: null };
+  fixedSettings[name].role = role;
+  if (role === 'none') fixedSettings[name].group = null;
+  renderFixedMembers();
+}
+
+function setGroup(name, value) {
+  fixedSettings[name] = fixedSettings[name] || { role: 'none', group: null };
+  fixedSettings[name].group = value === '' ? null : parseInt(value);
+}
+
+function adjustNumber(id, delta) {
+  const input = document.getElementById(id);
+  const val = parseInt(input.value) || 0;
+  const newVal = Math.max(parseInt(input.min), Math.min(parseInt(input.max), val + delta));
+  input.value = newVal;
+  if (members.length > 0) renderFixedMembers();
+  updateGenerateBtn();
+}
+
+document.getElementById('groupCount').addEventListener('change', () => {
+  if (members.length > 0) renderFixedMembers();
+  updateGenerateBtn();
+});
+
+function updateGenerateBtn() {
+  const btn = document.getElementById('generateBtn');
+  const groupCount = parseInt(document.getElementById('groupCount').value) || 0;
+  btn.disabled = members.length < 2 || groupCount < 2;
+}
+
+// ======== Group Generation Algorithm ========
+
+function generateGroups() {
+  const groupCount = parseInt(document.getElementById('groupCount').value);
+  const turnCount = parseInt(document.getElementById('turnCount').value);
+
+  // Separate fixed and free members
+  const fixedMembers = []; // { name, role, group }
+  const freeMembers = [];
+
+  members.forEach(name => {
+    const s = fixedSettings[name] || { role: 'none', group: null };
+    if (s.role !== 'none' && s.group !== null) {
+      fixedMembers.push({ name, role: s.role, group: s.group });
+    } else if (s.role !== 'none') {
+      // Has role but auto-assigned group - distribute evenly
+      fixedMembers.push({ name, role: s.role, group: null });
+    } else {
+      freeMembers.push(name);
+    }
+  });
+
+  // Assign auto groups to fixed-role members without specified groups
+  const autoFixedByRole = fixedMembers.filter(m => m.group === null);
+  if (autoFixedByRole.length > 0) {
+    // Distribute facilitators evenly across groups
+    autoFixedByRole.forEach((m, i) => {
+      m.group = i % groupCount;
+    });
+  }
+
+  // Generate assignments with minimum overlap
+  const bestResult = findBestAssignment(freeMembers, fixedMembers, groupCount, turnCount);
+
+  results = bestResult;
+  showResults();
+}
+
+function findBestAssignment(freeMembers, fixedMembers, groupCount, turnCount) {
+  let bestResult = null;
+  let bestScore = Infinity;
+
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const result = generateOneAttempt(freeMembers, fixedMembers, groupCount, turnCount);
+    if (result.score < bestScore) {
+      bestScore = result.score;
+      bestResult = result;
+    }
+    if (bestScore === 0) break;
+  }
+
+  return bestResult;
+}
+
+function generateOneAttempt(freeMembers, fixedMembers, groupCount, turnCount) {
+  const allTurns = [];
+  const pairCount = {};
+
+  for (let t = 0; t < turnCount; t++) {
+    // Try multiple shuffles for this turn, pick the one with least overlap
+    let bestGroups = null;
+    let bestTurnScore = Infinity;
+    const shuffleAttempts = t === 0 ? 1 : 30;
+
+    for (let s = 0; s < shuffleAttempts; s++) {
+      const order = [...freeMembers];
+      shuffleArray(order);
+      const groups = assignToGroups(order, fixedMembers, groupCount);
+      const turnScore = scoreGroups(groups, pairCount);
+
+      if (turnScore < bestTurnScore) {
+        bestTurnScore = turnScore;
+        bestGroups = groups;
+      }
+    }
+
+    // Update pair counts with chosen groups
+    bestGroups.forEach(group => {
+      const names = group.map(m => m.name);
+      for (let i = 0; i < names.length; i++) {
+        for (let j = i + 1; j < names.length; j++) {
+          const key = pairKey(names[i], names[j]);
+          pairCount[key] = (pairCount[key] || 0) + 1;
+        }
+      }
+    });
+
+    allTurns.push(bestGroups);
+  }
+
+  const score = Object.values(pairCount).reduce((sum, c) => sum + (c > 1 ? (c - 1) * (c - 1) : 0), 0);
+  return { turns: allTurns, pairCount, score };
+}
+
+function assignToGroups(orderedFree, fixedMembers, groupCount) {
+  const groups = Array.from({length: groupCount}, () => []);
+
+  // Place fixed members first
+  fixedMembers.forEach(m => {
+    groups[m.group].push({ name: m.name, role: m.role });
+  });
+
+  // Place free members into smallest group
+  orderedFree.forEach(name => {
+    let minSize = Infinity, minIdx = 0;
+    for (let g = 0; g < groupCount; g++) {
+      if (groups[g].length < minSize) {
+        minSize = groups[g].length;
+        minIdx = g;
+      }
+    }
+    groups[minIdx].push({ name, role: 'none' });
+  });
+
+  return groups;
+}
+
+function scoreGroups(groups, existingPairCount) {
+  let score = 0;
+  groups.forEach(group => {
+    const names = group.map(m => m.name);
+    for (let i = 0; i < names.length; i++) {
+      for (let j = i + 1; j < names.length; j++) {
+        const existing = existingPairCount[pairKey(names[i], names[j])] || 0;
+        if (existing > 0) score += existing;
+      }
+    }
+  });
+  return score;
+}
+
+function pairKey(a, b) {
+  return a < b ? a + '|' + b : b + '|' + a;
+}
+
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+// ======== Display Results ========
+
+function showResults() {
+  document.getElementById('setupSection').classList.remove('active');
+  document.getElementById('resultSection').classList.add('active');
+  showTab(currentTab);
+}
+
+function showSetup() {
+  document.getElementById('resultSection').classList.remove('active');
+  document.getElementById('setupSection').classList.add('active');
+}
+
+function showTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', ['all', 'byTurn', 'stats'][i] === tab);
+  });
+
+  const content = document.getElementById('resultContent');
+
+  if (tab === 'all') {
+    content.innerHTML = results.turns.map((groups, t) => renderTurn(groups, t)).join('');
+  } else if (tab === 'byTurn') {
+    content.innerHTML = renderTurnSelector() + renderTurn(results.turns[0], 0);
+  } else {
+    content.innerHTML = renderStats();
+  }
+}
+
+function renderTurn(groups, turnIndex) {
+  const groupColors = ['group-color-0','group-color-1','group-color-2','group-color-3','group-color-4','group-color-5','group-color-6','group-color-7'];
+
+  return `
+    <div class="turn-section fade-in">
+      <div class="turn-header">
+        <span>🔄</span> ターン ${turnIndex + 1}
+      </div>
+      ${groups.map((group, gi) => `
+        <div class="group-card ${groupColors[gi % groupColors.length]}">
+          <div class="group-card-title">グループ ${gi + 1}（${group.length}名）</div>
+          <div class="group-members">
+            ${group.map(m => {
+              let cls = 'member-tag';
+              let icon = '';
+              if (m.role === 'facilitator') { cls += ' is-facilitator'; icon = '<span class="role-icon">👑</span>'; }
+              else if (m.role === 'fixed') { cls += ' is-fixed'; icon = '<span class="role-icon">📌</span>'; }
+              return `<span class="${cls}">${icon}${m.name}</span>`;
+            }).join('')}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderTurnSelector() {
+  const buttons = results.turns.map((_, i) =>
+    `<button class="tab-btn ${i === 0 ? 'active' : ''}" onclick="selectTurn(${i}, this)">T${i+1}</button>`
+  ).join('');
+  return `<div class="tab-bar" id="turnSelector">${buttons}</div>`;
+}
+
+function selectTurn(index, btn) {
+  document.querySelectorAll('#turnSelector .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const container = document.getElementById('resultContent');
+  const selector = document.getElementById('turnSelector').outerHTML;
+  container.innerHTML = selector + renderTurn(results.turns[index], index);
+}
+
+function renderStats() {
+  const pairCount = results.pairCount;
+  const pairs = Object.entries(pairCount);
+  const maxOverlap = pairs.length > 0 ? Math.max(...pairs.map(p => p[1])) : 0;
+  const overlapPairs = pairs.filter(p => p[1] > 1);
+  const totalPairs = pairs.length;
+
+  let overlapClass = 'overlap-good';
+  let overlapText = '重複なし！完璧な振り分けです';
+  if (overlapPairs.length > 0) {
+    const ratio = overlapPairs.length / totalPairs;
+    if (ratio > 0.3) { overlapClass = 'overlap-bad'; overlapText = '重複が多めです。グループ数を増やすか参加者を増やしてみてください'; }
+    else { overlapClass = 'overlap-ok'; overlapText = '一部重複がありますが概ね良好です'; }
+  }
+
+  let html = `
+    <div class="card fade-in">
+      <div class="card-title"><span class="icon">📊</span> 振り分け統計</div>
+      <div class="overlap-stats">
+        <p><strong>ペア総数:</strong> ${totalPairs}</p>
+        <p><strong>重複ペア数:</strong> ${overlapPairs.length}</p>
+        <p><strong>最大重複回数:</strong> ${maxOverlap}</p>
+        <p class="${overlapClass}" style="margin-top:8px; font-weight:600;">${overlapText}</p>
+      </div>
+    </div>
+  `;
+
+  if (overlapPairs.length > 0) {
+    overlapPairs.sort((a, b) => b[1] - a[1]);
+    html += `
+      <div class="card fade-in">
+        <div class="card-title"><span class="icon">🔄</span> 重複ペア一覧</div>
+        <div class="member-list">
+          ${overlapPairs.map(([pair, count]) => {
+            const [a, b] = pair.split('|');
+            return `<div class="member-item">
+              <span class="member-name">${a} & ${b}</span>
+              <span class="badge badge-fixed">${count}回</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  return html;
+}
+
+// ======== Export ========
+
+function exportResults() {
+  if (!results) return;
+
+  let csv = '\uFEFF'; // BOM for Excel
+  results.turns.forEach((groups, t) => {
+    csv += `ターン${t + 1}\n`;
+    groups.forEach((group, g) => {
+      csv += `グループ${g + 1},${group.map(m => {
+        let suffix = '';
+        if (m.role === 'facilitator') suffix = '(ファシリ)';
+        else if (m.role === 'fixed') suffix = '(固定)';
+        return m.name + suffix;
+      }).join(',')}\n`;
+    });
+    csv += '\n';
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `グループ振り分け_${new Date().toLocaleDateString('ja-JP')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Service Worker registration
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+
+</body>
+</html>
