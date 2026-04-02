@@ -442,6 +442,22 @@ body {
       </div>
       <input type="file" id="csvFileInput" accept=".csv,.txt">
       <div id="fileInfo" style="display:none"></div>
+      <div class="setting-row" style="margin-top:12px;">
+        <div class="setting-label">
+          名前の列
+          <small>CSVの何列目を名前として読み込むか</small>
+        </div>
+        <select id="nameColumn" onchange="reParseIfLoaded()" style="background:var(--surface2);border:1px solid rgba(255,255,255,0.15);color:var(--text);border-radius:8px;padding:6px 12px;font-size:14px;min-width:70px;">
+          <option value="0">A列</option>
+          <option value="1">B列</option>
+          <option value="2" selected>C列</option>
+          <option value="3">D列</option>
+          <option value="4">E列</option>
+          <option value="5">F列</option>
+          <option value="6">G列</option>
+          <option value="7">H列</option>
+        </select>
+      </div>
       <span class="sample-link" onclick="loadSampleData()">サンプルデータで試す</span>
     </div>
 
