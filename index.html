@@ -564,7 +564,20 @@ function readCSV(file) {
   reader.readAsText(file, 'UTF-8');
 }
 
+// Store raw CSV text for re-parsing when column changes
+let rawCSVText = '';
+let rawCSVFileName = '';
+
+function reParseIfLoaded() {
+  if (rawCSVText) {
+    parseCSV(rawCSVText, rawCSVFileName);
+  }
+}
+
 function parseCSV(text, fileName) {
+  rawCSVText = text;
+  rawCSVFileName = fileName;
+  const colIndex = parseInt(document.getElementById('nameColumn').value);
   const lines = text.split(/\r?\n/).filter(l => l.trim());
   if (lines.length === 0) return;
 
@@ -575,7 +588,7 @@ function parseCSV(text, fileName) {
   members = [];
   for (let i = startIndex; i < lines.length; i++) {
     const cols = lines[i].split(',');
-    const name = (cols[2] || '').trim().replace(/^["']|["']$/g, '');
+    const name = (cols[colIndex] || '').trim().replace(/^["']|["']$/g, '');
     if (name) members.push(name);
   }
 
