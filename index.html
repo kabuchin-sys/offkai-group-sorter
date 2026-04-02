@@ -438,7 +438,7 @@ body {
       <div class="upload-area" id="uploadArea" onclick="document.getElementById('csvFileInput').click()">
         <div class="icon-large">📁</div>
         <p>CSVファイルをタップして選択</p>
-        <div class="hint">形式: 名前 の1列、またはヘッダー付きCSV</div>
+        <div class="hint">形式: C列（3列目）に名前があるCSV</div>
       </div>
       <input type="file" id="csvFileInput" accept=".csv,.txt">
       <div id="fileInfo" style="display:none"></div>
@@ -559,7 +559,7 @@ function parseCSV(text, fileName) {
   members = [];
   for (let i = startIndex; i < lines.length; i++) {
     const cols = lines[i].split(',');
-    const name = cols[0].trim().replace(/^["']|["']$/g, '');
+    const name = (cols[2] || '').trim().replace(/^["']|["']$/g, '');
     if (name) members.push(name);
   }
 
@@ -602,23 +602,23 @@ function clearMembers() {
 }
 
 function loadSampleData() {
-  const sampleCSV = `名前
-田中太郎
-佐藤花子
-鈴木一郎
-高橋美咲
-伊藤健太
-渡辺真由
-山本大輔
-中村さくら
-小林誠
-加藤恵
-吉田隆
-松本あかり
-山田翔太
-井上めぐみ
-木村拓也
-林真理子`;
+  const sampleCSV = `No,メール,名前
+1,tanaka@example.com,田中太郎
+2,sato@example.com,佐藤花子
+3,suzuki@example.com,鈴木一郎
+4,takahashi@example.com,高橋美咲
+5,ito@example.com,伊藤健太
+6,watanabe@example.com,渡辺真由
+7,yamamoto@example.com,山本大輔
+8,nakamura@example.com,中村さくら
+9,kobayashi@example.com,小林誠
+10,kato@example.com,加藤恵
+11,yoshida@example.com,吉田隆
+12,matsumoto@example.com,松本あかり
+13,yamada@example.com,山田翔太
+14,inoue@example.com,井上めぐみ
+15,kimura@example.com,木村拓也
+16,hayashi@example.com,林真理子`;
   parseCSV(sampleCSV, 'サンプルデータ');
 }
 
